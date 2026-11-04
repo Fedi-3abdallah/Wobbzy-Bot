@@ -1,1 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Q&A Chatbot</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        #messages {
+            min-height: 400px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            overflow-y: auto;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+        }
+
+        .user {
+            background: #e3f2fd;
+            text-align: right;
+        }
+
+        .bot {
+            background: #e8f5e9;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Gemini Q&A Chatbot</h2>
+
+    <div id="messages"></div>
+
+    <div class="input-area">
+        <input
+            type="text"
+            id="chat"
+            placeholder="Ask a question..."
+        >
+
+        <button id="btn">Send</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+
+</body>
+
+</html>
