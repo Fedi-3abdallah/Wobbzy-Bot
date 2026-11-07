@@ -16,7 +16,6 @@ app = Flask(__name__)
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-previous_interaction_id = None
 
 
 @app.route("/")
