@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session
-
 from google import genai
-import os
+import os, time
 
 _env_path = os.path.join(os.path.dirname(__file__), ".env")
 if os.path.exists(_env_path):
@@ -35,6 +34,8 @@ def chatbot():
         previous_interaction_id = session.get("previous_interaction_id")
 
         if previous_interaction_id:
+            started = time.perf_counter()
+            app.logger.info("Starting Gemini request")
             interaction = client.interactions.create(
                 model="gemini-3.8-flash",
                 input=message,
@@ -42,14 +43,20 @@ def chatbot():
             )
         else:
             interaction = client.interactions.create(
-                model="gemini-3.6-flash",
+                model="gemini-3.8-flash",
                 input=message,
             )
 
         session["previous_interaction_id"] = interaction.id
         return jsonify({"response": interaction.output_text})
+        app.logger.info(
+            "Gemini request finished in %.1f seconds", time.perf_counter() - started
+        )
 
     except Exception as e:
+        app.logger.exception(
+            "Chat request failed after %.1f seconds", time.perf_counter() - started
+        )
         error_text = str(e).lower()
         status_code = getattr(e, "status_code", None) or getattr(e, "code", None)
 
