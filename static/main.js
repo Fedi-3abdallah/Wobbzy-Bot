@@ -58,6 +58,11 @@ async function chatGemini() {
 
         const data = await response.json();
 
+		if (data.code === "quota_exhausted" || response.status === 429) {
+			showQuotaWarning();
+			return;
+		}
+
         if (data.error) {
             addMessage(data.error, "bot");
             return;
