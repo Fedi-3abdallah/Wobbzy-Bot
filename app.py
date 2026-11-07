@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
+
 from google import genai
 import os
 
@@ -12,6 +13,7 @@ if os.path.exists(_env_path):
                 os.environ.setdefault(_k.strip(), _v.strip())
 
 app = Flask(__name__)
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 previous_interaction_id = None
@@ -24,8 +26,6 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chatbot():
-    global previous_interaction_id
-
     data = request.get_json()
     message = data.get("message", "").strip()
 
@@ -33,6 +33,8 @@ def chatbot():
         return jsonify({"error": "Message cannot be empty"}), 400
 
     try:
+        previous_interaction_id = session.get("previous_interaction_id")
+
         if previous_interaction_id:
             interaction = client.interactions.create(
                 model="gemini-3.8-flash",
@@ -43,11 +45,9 @@ def chatbot():
             interaction = client.interactions.create(
                 model="gemini-3.6-flash",
                 input=message,
-                previous_interaction_id=None,
             )
 
-        previous_interaction_id = interaction.id
-
+        session["previous_interaction_id"] = interaction.id
         return jsonify({"response": interaction.output_text})
 
     except Exception as e:
