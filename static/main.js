@@ -19,15 +19,33 @@ function addMessage(message, type) {
     messages.scrollTop = messages.scrollHeight;
 }
 
+function showQuotaWarning() {
+    const div = document.createElement("div");
+    div.className = "message bot";
+    div.textContent = "The free AI token limit has been reached. Please try again later.";
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
 async function chatGemini() {
     const message = messageInput.value.trim();
 
-    if (!message) {
+    if (!message || sendBtn.disabled) {
         return;
     }
 
     addMessage(message, "user");
     messageInput.value = "";
+
+    const thinking = document.createElement("div");
+    thinking.className = "message bot thinking";
+    thinking.setAttribute("role", "status");
+    thinking.textContent = "Thinking…";
+    messages.appendChild(thinking);
+    messages.scrollTop = messages.scrollHeight;
+
+    sendBtn.disabled = true;
+    messageInput.disabled = true;
 
     try {
         const response = await fetch("/chat", {
@@ -35,9 +53,7 @@ async function chatGemini() {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                message: message
-            })
+            body: JSON.stringify({ message })
         });
 
         const data = await response.json();
@@ -50,12 +66,13 @@ async function chatGemini() {
         addMessage(data.response, "bot");
 
     } catch (error) {
-        addMessage(
-            "Something went wrong. Please try again.",
-            "bot"
-        );
-
+        addMessage("Something went wrong. Please try again.", "bot");
         console.error(error);
+    } finally {
+        thinking.remove();
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
     }
 }
 
