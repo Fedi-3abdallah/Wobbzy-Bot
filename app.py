@@ -1,36 +1,19 @@
-import os
-
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, render_template, request, jsonify
 from google import genai
+import os
 
 _env_path = os.path.join(os.path.dirname(__file__), ".env")
 if os.path.exists(_env_path):
-    with open(_env_path, encoding="utf-8") as env_file:
-        for line in env_file:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                os.environ.setdefault(key.strip(), value.strip())
-
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 app = Flask(__name__)
 
-secret_key = os.environ.get("FLASK_SECRET_KEY")
-if not secret_key:
-    raise RuntimeError("Set FLASK_SECRET_KEY in your environment or .env file.")
-
-app.secret_key = secret_key
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE") == "1",
-)
-
-api_key = os.environ.get("GEMINI_API_KEY")
-if not api_key:
-    raise RuntimeError("Set GEMINI_API_KEY in your environment or .env file.")
-
-client = genai.Client(api_key=api_key)
-model = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+previous_interaction_id = None
 
 
 @app.route("/")
@@ -40,45 +23,33 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chatbot():
-    data = request.get_json(silent=True)
+    global previous_interaction_id
 
-    if not isinstance(data, dict):
-        return jsonify({"error": "Request must contain a JSON object"}), 400
+    data = request.get_json()
+    message = data.get("message", "").strip()
 
-    message = data.get("message")
-    if not isinstance(message, str) or not message.strip():
+    if not message:
         return jsonify({"error": "Message cannot be empty"}), 400
-
-    message = message.strip()
-    if len(message) > 10_000:
-        return jsonify({"error": "Message is too long"}), 400
-
     try:
-        previous_interaction_id = session.get("gemini_interaction_id")
-
-        request_args = {
-            "model": model,
-            "input": message,
-        }
         if previous_interaction_id:
-            request_args["previous_interaction_id"] = previous_interaction_id
-
-        interaction = client.interactions.create(**request_args)
-
-        session["gemini_interaction_id"] = interaction.id
+            interaction = client.interactions.create(
+                model="gemini-3.8-flash",
+                input=message,
+                previous_interaction_id=previous_interaction_id,
+            )
+        else:
+            interaction = client.interactions.create(
+                model="gemini-3.6-flash",
+                input=message,
+                previous_interaction_id=previous_interaction_id,
+            )
+        previous_interaction_id = previous_interaction_id
 
         return jsonify({"response": interaction.output_text})
 
-    except Exception:
-        app.logger.exception("Gemini request failed")
-        return jsonify({"error": "The bot couldn't respond. Please try again."}), 500
-
-
-@app.route("/reset-chat", methods=["POST"])
-def reset_chat():
-    session.pop("gemini_interaction_id", None)
-    return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)
